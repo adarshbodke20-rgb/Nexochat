@@ -31,7 +31,7 @@
       grid-template-columns: 310px 1fr; background: var(--white);
       border: 1px solid #e9ebef; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow);
     }
-    .sidebar { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .sidebar { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #fff; }
     .brand-row { height: 82px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
     .brand { font-size: 22px; letter-spacing: 4px; font-weight: 750; }
     .brand-mark { width: 30px; height: 30px; border: 1.7px solid var(--ink); border-radius: 10px; display: grid; place-items: center; font-size: 13px; font-weight: 750; letter-spacing: -1px; }
@@ -66,15 +66,15 @@
     .pending-item .member-info { min-width: 0; }
     .approve-btn { margin-left: auto; border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 7px 11px; font-size: 11px; font-weight: 650; }
     .approve-btn:disabled { opacity: .6; }
-    .list-note { color: var(--muted); font-size: 12px; padding: 14px 12px; }
+    .list-note { color: var(--muted); font-size: 12px; padding: 14px 12px; text-align: center; }
     .chat { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
     .chat-head { height: 82px; border-bottom: 1px solid var(--line); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
     .chat-person { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .chat-person strong { display: block; font-size: 14px; }
-    .chat-person small { display: block; color: var(--green); font-size: 11px; margin-top: 4px; }
+    .chat-person small { display: block; font-size: 11px; margin-top: 4px; }
     .icon-btn { border: 1px solid var(--line); background: white; width: 36px; height: 36px; border-radius: 10px; color: #626a75; font-size: 17px; }
-    .chat-body { flex: 1; padding: 28px; overflow-y: auto; background: linear-gradient(#fff, #fff); }
-    .date-label { display: flex; align-items: center; gap: 12px; color: #a1a6ae; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; margin: 2px 0 28px; }
+    .chat-body { flex: 1; padding: 28px; overflow-y: auto; background: #fff; }
+    .date-label { display: flex; align-items: center; gap: 12px; color: #a1a6ae; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; margin: 18px 0; }
     .date-label:before, .date-label:after { content: ""; height: 1px; background: var(--line); flex: 1; }
     .message-row { display: flex; gap: 9px; margin: 18px 0; align-items: flex-end; }
     .message-row.mine { justify-content: flex-end; }
@@ -88,6 +88,7 @@
     .compose-box { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 13px; padding: 7px 8px 7px 15px; }
     .message-input { flex: 1; min-width: 0; border: 0; outline: none; padding: 9px 0; font-size: 13px; color: var(--ink); }
     .send { width: 38px; height: 38px; border: 0; border-radius: 10px; background: var(--accent); color: white; font-size: 17px; }
+    .send:disabled { opacity: .5; cursor: not-allowed; }
     .compose-note { color: #a0a5ad; font-size: 10px; margin: 9px 4px 0; }
     .empty { height: 100%; display: grid; place-items: center; text-align: center; color: var(--muted); }
     .empty strong { color: var(--ink); display: block; margin: 12px 0 6px; font-size: 16px; }
@@ -96,7 +97,7 @@
     .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #20242b; color: white; padding: 10px 15px; border-radius: 9px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; text-align: center; z-index: 50; }
     .toast.show { opacity: 1; }
 
-    /* Login, signup and pending screens */
+    /* Auth views */
     .auth-wrap { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
     .auth-card { width: min(400px, 100%); background: #fff; border: 1px solid #e9ebef; border-radius: 20px; box-shadow: var(--shadow); padding: 32px 28px; }
     .auth-brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
@@ -162,7 +163,7 @@
 
   <!-- Main app -->
   <main class="app hidden" id="app">
-    <aside class="sidebar mobile-open" id="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="brand-row">
         <div class="brand">NEXO</div>
         <div class="brand-mark">N.</div>
@@ -216,24 +217,24 @@
 
     let me = null;
     let profiles = [];
+    let pendingUsers = [];
     let unread = {};
     let activeId = null;
     let messages = [];
     let online = new Set();
     let msgChannel = null, presChannel = null;
-    let timers = [];
     let pendingTimer = null;
     let authMode = 'login';
-    let toastTimer;
+    let toastTimer = null;
     const COLORS = ['blue', 'peach', 'green', 'violet', ''];
 
-    /* ---------- helpers ---------- */
     function el(tag, cls, text) {
       const e = document.createElement(tag);
       if (cls) e.className = cls;
       if (text !== undefined) e.textContent = text;
       return e;
     }
+
     function showToast(message, ms) {
       const toast = $('toast');
       toast.textContent = message;
@@ -241,44 +242,54 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toast.classList.remove('show'), ms || 2600);
     }
+
     function showView(name) {
       ['authView', 'pendingView', 'app'].forEach(v => $(v).classList.toggle('hidden', v !== name));
     }
+
     function setAuthMsg(text, ok) {
       const m = $('authMsg');
       m.textContent = text || '';
       m.classList.toggle('ok', !!ok);
     }
+
     function nameOf(p) {
       return (p && (p.display_name || (p.email || '').split('@')[0])) || 'Member';
     }
+
     function initials(p) {
       const parts = nameOf(p).trim().split(/\s+/).filter(Boolean);
       if (!parts.length) return '?';
       return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
     }
+
     function colorOf(p) {
       const s = String((p && p.id) || '');
       let h = 0;
       for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
       return COLORS[h % COLORS.length];
     }
+
     function isOnline(id) { return id === (me && me.id) || online.has(id); }
+
     function lastSeenText(iso) {
       if (!iso) return 'Offline';
       const s = (Date.now() - new Date(iso).getTime()) / 1000;
       if (s < 90) return 'Last seen just now';
       const m = Math.floor(s / 60);
-      if (m < 60) return 'Last seen ' + m + ' min ago';
+      if (m < 60) return `Last seen ${m} min ago`;
       const h = Math.floor(m / 60);
-      if (h < 24) return 'Last seen ' + h + ' h ago';
+      if (h < 24) return `Last seen ${h} h ago`;
       if (h < 48) return 'Last seen yesterday';
       return 'Last seen ' + new Date(iso).toLocaleDateString();
     }
+
     function statusText(p) { return isOnline(p.id) ? 'Online' : lastSeenText(p.last_seen); }
+
     function fmtTime(iso) {
       return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
+
     function dayLabel(iso) {
       const d = new Date(iso);
       const t = new Date();
@@ -287,14 +298,16 @@
       if (d.toDateString() === y.toDateString()) return 'YESTERDAY';
       return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
     }
+
     function avatarEl(p, withDot) {
       const a = el('span', 'avatar ' + colorOf(p), initials(p));
       if (withDot && isOnline(p.id)) a.appendChild(el('span', 'dot'));
       return a;
     }
+
     function profileById(id) { return profiles.find(p => p.id === id); }
 
-    /* ---------- auth screen ---------- */
+    /* ---------- Auth ---------- */
     function setMode(mode) {
       authMode = mode;
       $('tabLogin').classList.toggle('active', mode === 'login');
@@ -309,7 +322,7 @@
 
     $('authForm').addEventListener('submit', async e => {
       e.preventDefault();
-      if (!sb) return setAuthMsg('Could not load Supabase. Check your internet connection and reload.');
+      if (!sb) return setAuthMsg('Supabase SDK failed to load. Check your internet connection.');
       const btn = $('authSubmit');
       btn.disabled = true;
       setAuthMsg('');
@@ -341,11 +354,12 @@
       }
     });
 
-    /* ---------- boot / pending ---------- */
+    /* ---------- Boot / Sync ---------- */
     async function fetchOwnProfile(user) {
       let { data, error } = await sb.from('nexo_profiles').select('*').eq('id', user.id).maybeSingle();
       if (error) throw error;
       const metaName = user.user_metadata && user.user_metadata.display_name;
       if (!data) {
         const ins = await sb.from('nexo_profiles').insert({
-          id: us
+          id: user.id,
+          email: user.
