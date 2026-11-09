@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>NEXO — Private Messages</title>
+  <style>
+    :root {
+      --ink: #17191c;
+      --muted: #858b94;
+      --line: #eceef1;
+      --soft: #f7f8fa;
+      --accent: #315efb;
+      --accent-soft: #edf1ff;
+      --green: #24b47e;
+      --white: #fff;
+      --shadow: 0 12px 40px rgba(20, 28, 45, .06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #f5f6f8; color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+    .app {
+      width: min(1180px, calc(100% - 36px)); height: min(790px, calc(100vh - 40px));
+      min-height: 590px; margin: 20px auto; display: grid; position: relative;
+      grid-template-columns: 310px 1fr; background: var(--white);
+      border: 1px solid #e9ebef; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow);
+    }
+    .sidebar { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .brand-row { height: 82px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+    .brand { font-size: 22px; letter-spacing: 4px; font-weight: 750; }
+    .brand-mark { width: 30px; height: 30px; border: 1.7px solid var(--ink); border-radius: 10px; display: grid; place-items: center; font-size: 13px; font-weight: 750; letter-spacing: -1px; }
+    .section-head { padding: 22px 22px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .section-head span { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: 1.5px; }
+    .count { color: #8b9099; background: #f1f2f4; border-radius: 20px; padding: 4px 8px; font-size: 11px; }
+    .search-wrap { padding: 0 18px 14px; }
+    .search { width: 100%; border: 1px solid var(--line); background: #fafbfc; border-radius: 10px; padding: 11px 13px; outline: none; color: var(--ink); font-size: 13px; }
+    .search:focus, .message-input:focus { border-color: #c8d2ff; box-shadow: 0 0 0 3px #edf1ff; }
+    .members { overflow-y: auto; padding: 0 10px 16px; flex: 1; min-height: 0; }
+    .member { width: 100%; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 11px; border-radius: 12px; color: inherit; }
+    .member:hover { background: #f8f9fb; }
+    .member.active { background: #f2f5ff; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #edf0f4; display: grid; place-items: center; color: #555d69; font-size: 12px; font-weight: 700; flex: 0 0 auto; position: relative; }
+    .avatar.blue { background: #e9efff; color: #315efb; }
+    .avatar.peach { background: #fff0e9; color: #b66b45; }
+    .avatar.green { background: #e7f7f0; color: #25845f; }
+    .avatar.violet { background: #f0ebff; color: #7655bd; }
+    .dot { width: 10px; height: 10px; background: var(--green); border: 2px solid white; border-radius: 50%; position: absolute; right: -1px; bottom: 0; }
+    .member-info { flex: 1; min-width: 0; }
+    .member-name { display: block; font-size: 13px; font-weight: 650; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .member-status { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .member-status.online { color: var(--green); }
+    .badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 20px; padding: 3px 7px; min-width: 20px; text-align: center; flex: 0 0 auto; }
+    .sidebar-foot { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+    .admin-label { font-size: 12px; font-weight: 650; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-sub { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .admin-tag { margin-left: 4px; font-size: 9px; font-weight: 750; letter-spacing: 1px; color: #315efb; background: var(--accent-soft); padding: 5px 7px; border-radius: 5px; }
+    .logout { margin-left: auto; border: 1px solid var(--line); background: #fff; color: #626a75; border-radius: 10px; padding: 8px 10px; font-size: 11px; font-weight: 650; }
+    .pending-box { border-bottom: 1px solid var(--line); max-height: 34%; overflow-y: auto; flex: 0 0 auto; }
+    .pending-item { display: flex; align-items: center; gap: 10px; padding: 8px 21px; }
+    .pending-item .member-info { min-width: 0; }
+    .approve-btn { margin-left: auto; border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 7px 11px; font-size: 11px; font-weight: 650; }
+    .approve-btn:disabled { opacity: .6; }
+    .list-note { color: var(--muted); font-size: 12px; padding: 14px 12px; }
+    .chat { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .chat-head { height: 82px; border-bottom: 1px solid var(--line); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
+    .chat-person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .chat-person strong { display: block; font-size: 14px; }
+    .chat-person small { display: block; color: var(--green); font-size: 11px; margin-top: 4px; }
+    .icon-btn { border: 1px solid var(--line); background: white; width: 36px; height: 36px; border-radius: 10px; color: #626a75; font-size: 17px; }
+    .chat-body { flex: 1; padding: 28px; overflow-y: auto; background: linear-gradient(#fff, #fff); }
+    .date-label { display: flex; align-items: center; gap: 12px; color: #a1a6ae; font-size: 10px; letter-spacing: 1.2px; font-weight: 700; margin: 2px 0 28px; }
+    .date-label:before, .date-label:after { content: ""; height: 1px; background: var(--line); flex: 1; }
+    .message-row { display: flex; gap: 9px; margin: 18px 0; align-items: flex-end; }
+    .message-row.mine { justify-content: flex-end; }
+    .bubble-wrap { max-width: min(68%, 440px); }
+    .bubble { padding: 12px 15px; border-radius: 15px 15px 15px 4px; background: #f2f4f7; color: #303640; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .mine .bubble { background: var(--accent); color: white; border-radius: 15px 15px 4px 15px; }
+    .time { color: #a0a5ad; font-size: 10px; margin: 6px 4px 0; }
+    .mine .time { text-align: right; }
+    .sender { color: #8b919b; font-size: 10px; margin: 0 4px 5px; }
+    .chat-compose { padding: 18px 24px 22px; border-top: 1px solid var(--line); flex: 0 0 auto; }
+    .compose-box { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 13px; padding: 7px 8px 7px 15px; }
+    .message-input { flex: 1; min-width: 0; border: 0; outline: none; padding: 9px 0; font-size: 13px; color: var(--ink); }
+    .send { width: 38px; height: 38px; border: 0; border-radius: 10px; background: var(--accent); color: white; font-size: 17px; }
+    .compose-note { color: #a0a5ad; font-size: 10px; margin: 9px 4px 0; }
+    .empty { height: 100%; display: grid; place-items: center; text-align: center; color: var(--muted); }
+    .empty strong { color: var(--ink); display: block; margin: 12px 0 6px; font-size: 16px; }
+    .empty-mark { width: 58px; height: 58px; border: 1px solid var(--line); border-radius: 18px; display: grid; place-items: center; margin: auto; color: var(--accent); font-size: 23px; }
+    .mobile-menu { display: none; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #20242b; color: white; padding: 10px 15px; border-radius: 9px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; text-align: center; z-index: 50; }
+    .toast.show { opacity: 1; }
+
+    /* Login, signup and pending screens */
+    .auth-wrap { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+    .auth-card { width: min(400px, 100%); background: #fff; border: 1px solid #e9ebef; border-radius: 20px; box-shadow: var(--shadow); padding: 32px 28px; }
+    .auth-brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .auth-card h2 { margin: 0 0 6px; font-size: 18px; }
+    .auth-card p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .tabs { display: flex; gap: 6px; background: #f1f2f4; border-radius: 11px; padding: 4px; margin-bottom: 18px; }
+    .tab { flex: 1; border: 0; background: transparent; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 650; color: var(--muted); }
+    .tab.active { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(20,28,45,.08); }
+    .auth-card .search { margin-bottom: 10px; padding: 13px; }
+    .btn { width: 100%; border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 650; margin-top: 4px; }
+    .btn:disabled { opacity: .6; }
+    .btn.ghost { background: #fff; color: #626a75; border: 1px solid var(--line); margin-top: 10px; }
+    .form-msg { font-size: 12px; margin: 12px 0 0; min-height: 16px; color: #d33; line-height: 1.45; }
+    .form-msg.ok { color: var(--green); }
+
+    @media (max-width: 700px) {
+      .app { width: 100%; height: 100vh; height: 100dvh; min-height: 0; margin: 0; border: 0; border-radius: 0; grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .sidebar.mobile-open { display: flex; position: absolute; inset: 0; z-index: 5; background: white; }
+      .chat-head { padding: 0 16px; height: 72px; }
+      .chat-body { padding: 20px 15px; }
+      .chat-compose { padding: 13px 14px 17px; }
+      .bubble-wrap { max-width: 82%; }
+      .mobile-menu { display: inline-grid !important; place-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login / Signup -->
+  <div class="auth-wrap hidden" id="authView">
+    <form class="auth-card" id="authForm" novalidate>
+      <div class="auth-brand">
+        <div class="brand">NEXO</div>
+        <div class="brand-mark">N.</div>
+      </div>
+      <div class="tabs">
+        <button type="button" class="tab active" id="tabLogin">Log in</button>
+        <button type="button" class="tab" id="tabSignup">Sign up</button>
+      </div>
+      <input class="search hidden" id="authName" placeholder="Your name" autocomplete="name" aria-label="Your name" maxlength="40">
+      <input class="search" id="authEmail" type="email" placeholder="Email" autocomplete="email" aria-label="Email">
+      <input class="search" id="authPassword" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password" aria-label="Password">
+      <button class="btn" type="submit" id="authSubmit">Log in</button>
+      <div class="form-msg" id="authMsg" role="alert"></div>
+    </form>
+  </div>
+
+  <!-- Waiting for approval -->
+  <div class="auth-wrap hidden" id="pendingView">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand">NEXO</div>
+        <div class="brand-mark">N.</div>
+      </div>
+      <h2>Waiting for approval</h2>
+      <p>Your account has been created. An administrator needs to approve it before you can use NEXO. This page checks automatically.</p>
+      <button class="btn" type="button" id="pendingCheck">Check again</button>
+      <button class="btn ghost" type="button" id="pendingLogout">Log out</button>
+      <div class="form-msg" id="pendingMsg" role="alert"></div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <main class="app hidden" id="app">
+    <aside class="sidebar mobile-open" id="sidebar">
+      <div class="brand-row">
+        <div class="brand">NEXO</div>
+        <div class="brand-mark">N.</div>
+      </div>
+
+      <div class="pending-box hidden" id="pendingBox">
+        <div class="section-head"><span>PENDING APPROVAL</span><div class="count" id="pendingCount">00</div></div>
+        <div id="pendingList"></div>
+      </div>
+
+      <div class="section-head"><span>MEMBERS</span><div class="count" id="memberCount">00</div></div>
+      <div class="search-wrap"><input class="search" id="search" placeholder="Search members..." aria-label="Search members"></div>
+      <div class="members" id="members"></div>
+      <div class="sidebar-foot">
+        <span class="avatar" id="meAvatar">?</span>
+        <div><div class="admin-label" id="meName">You</div><div class="admin-sub" id="meRole">Member</div></div>
+        <span class="admin-tag hidden" id="adminTag">ADMIN</span>
+        <button class="logout" id="logoutBtn" type="button">Log out</button>
+      </div>
+    </aside>
+
+    <section class="chat">
+      <header class="chat-head">
+        <div class="chat-person">
+          <button class="icon-btn mobile-menu" id="menuBtn" aria-label="Open members">☰</button>
+          <span class="avatar hidden" id="headAvatar">?</span>
+          <div><strong id="headName">NEXO</strong><small id="headStatus" style="color:var(--muted)">Select a member to start</small></div>
+        </div>
+        <button class="icon-btn" id="infoBtn" aria-label="Member information">···</button>
+      </header>
+      <div class="chat-body" id="chatBody"></div>
+      <form class="chat-compose" id="messageForm">
+        <div class="compose-box">
+          <input class="message-input" id="messageInput" placeholder="Write a message..." autocomplete="off" maxlength="2000" aria-label="Write a message">
+          <button class="send" type="submit" aria-label="Send message">↑</button>
+        </div>
+        <div class="compose-note">Private conversations are visible only to their participants.</div>
+      </form>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://ieuqlsogiqszikbqryol.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_SF7hbP_9_GVrN1pw9VIIWA_UjCL_Gxv';
+
+    const $ = id => document.getElementById(id);
+    const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+    let me = null;
+    let profiles = [];
+    let unread = {};
+    let activeId = null;
+    let messages = [];
+    let online = new Set();
+    let msgChannel = null, presChannel = null;
+    let timers = [];
+    let pendingTimer = null;
+    let authMode = 'login';
+    let toastTimer;
+    const COLORS = ['blue', 'peach', 'green', 'violet', ''];
+
+    /* ---------- helpers ---------- */
+    function el(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+    function showToast(message, ms) {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), ms || 2600);
+    }
+    function showView(name) {
+      ['authView', 'pendingView', 'app'].forEach(v => $(v).classList.toggle('hidden', v !== name));
+    }
+    function setAuthMsg(text, ok) {
+      const m = $('authMsg');
+      m.textContent = text || '';
+      m.classList.toggle('ok', !!ok);
+    }
+    function nameOf(p) {
+      return (p && (p.display_name || (p.email || '').split('@')[0])) || 'Member';
+    }
+    function initials(p) {
+      const parts = nameOf(p).trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '?';
+      return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+    }
+    function colorOf(p) {
+      const s = String((p && p.id) || '');
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return COLORS[h % COLORS.length];
+    }
+    function isOnline(id) { return id === (me && me.id) || online.has(id); }
+    function lastSeenText(iso) {
+      if (!iso) return 'Offline';
+      const s = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (s < 90) return 'Last seen just now';
+      const m = Math.floor(s / 60);
+      if (m < 60) return 'Last seen ' + m + ' min ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return 'Last seen ' + h + ' h ago';
+      if (h < 48) return 'Last seen yesterday';
+      return 'Last seen ' + new Date(iso).toLocaleDateString();
+    }
+    function statusText(p) { return isOnline(p.id) ? 'Online' : lastSeenText(p.last_seen); }
+    function fmtTime(iso) {
+      return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+    function dayLabel(iso) {
+      const d = new Date(iso);
+      const t = new Date();
+      const y = new Date(); y.setDate(t.getDate() - 1);
+      if (d.toDateString() === t.toDateString()) return 'TODAY';
+      if (d.toDateString() === y.toDateString()) return 'YESTERDAY';
+      return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+    }
+    function avatarEl(p, withDot) {
+      const a = el('span', 'avatar ' + colorOf(p), initials(p));
+      if (withDot && isOnline(p.id)) a.appendChild(el('span', 'dot'));
+      return a;
+    }
+    function profileById(id) { return profiles.find(p => p.id === id); }
+
+    /* ---------- auth screen ---------- */
+    function setMode(mode) {
+      authMode = mode;
+      $('tabLogin').classList.toggle('active', mode === 'login');
+      $('tabSignup').classList.toggle('active', mode === 'signup');
+      $('authName').classList.toggle('hidden', mode !== 'signup');
+      $('authSubmit').textContent = mode === 'signup' ? 'Create account' : 'Log in';
+      $('authPassword').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+      setAuthMsg('');
+    }
+    $('tabLogin').addEventListener('click', () => setMode('login'));
+    $('tabSignup').addEventListener('click', () => setMode('signup'));
+
+    $('authForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!sb) return setAuthMsg('Could not load Supabase. Check your internet connection and reload.');
+      const btn = $('authSubmit');
+      btn.disabled = true;
+      setAuthMsg('');
+      try {
+        const email = $('authEmail').value.trim();
+        const password = $('authPassword').value;
+        if (!email || !password) throw new Error('Please enter your email and password.');
+        if (authMode === 'signup') {
+          const name = $('authName').value.trim();
+          if (!name) throw new Error('Please enter your name.');
+          if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+          const { data, error } = await sb.auth.signUp({ email, password, options: { data: { display_name: name } } });
+          if (error) throw error;
+          if (data.session) {
+            await boot(data.session.user);
+          } else {
+            setMode('login');
+            setAuthMsg('Account created. Check your email to confirm it, then log in.', true);
+          }
+        } else {
+          const { data, error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          await boot(data.user);
+        }
+      } catch (err) {
+        setAuthMsg(err.message || String(err));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- boot / pending ---------- */
+    async function fetchOwnProfile(user) {
+      let { data, error } = await sb.from('nexo_profiles').select('*').eq('id', user.id).maybeSingle();
+      if (error) throw error;
+      const metaName = user.user_metadata && user.user_metadata.display_name;
+      if (!data) {
+        const ins = await sb.from('nexo_profiles').insert({
+          id: us
